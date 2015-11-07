@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <style>
+      h1 {
+         text-align: center
+      }
+      body {
+         text-align: center;
+         margin: 0 auto;
+         background-color: lightblue;
+      }
+      #map-canvas {
+         display: inline-block;
+         height: 70vh;
+         width: 48vw;
+      }
+      #quiz {
+         vertical-align: top;
+         outline: 1px dotted black;
+         display: inline-block;
+         height: 70vh;
+         width: 30vw;
+         font-size: 3vh;
+         background-color: cornflowerblue;
+      }
+      #resultsDiv {
+         position: absolute;
+         background-color: #14FC14;
+         color: black;
+         font-weight: bold;
+         visibility: hidden;
+         font-size: 10vh;
+         border: 10px solid purple;
+      }
+   </style>
+
+   <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+   <script>
+      var map,
+         latitude,
+         longitude,
+         currentIndex = 0,
+         score = 0,
+         rectangles = [],
+         library = {
+            name: 'Oviatt Library',
+            latMax: 34.240399327115504,
+            latMin: 34.23965429778273,
+            longMin: -118.53001635521991,
+            longMax: -118.52864306420429
+         },
+         arborGrill = {
+            name: 'Arbor Grill',
+            latMax: 34.241320164696,
+            latMin: 34.24103634787999,
+            longMin: -118.52976959199054,
+            longMax: -118.52955501526935
+         },
+         jacaranda = {
+            name: 'Jacaranda Building',
+            latMax: 34.24206517928518,
+            latMin: 34.241027478589054,
+            longMin: -118.52944772690876,
+            longMax: -118.52785985917194
+         },
+         square = {
+            name: 'Matador Square',
+            latMax: 34.2397059437991,
+            latMin: 34.23920925421882,
+            longMin: -118.52816026658161,
+            longMax: -118.5274199768935
+         },
+         bayramian = {
+            name: 'Bayramian Hall',
+            latMax: 34.24068360804601,
+            latMin: 34.24000066704912,
+            longMin: -118.53145262226633,
+            longMax: -118.53017052635721
+         },
+         buildings = [library, arborGrill, jacaranda, square, bayramian];
+
+      function askQuizQuestion(bldgIndex, currentText) {
+         'use strict';
+         var question = "Where is the "
+            + buildings[bldgIndex].name
+            + " located?<br/>",
+               newText;
+         newText = currentText + question;
+         document.getElementById('quiz').innerHTML = newText;
+      }
+
+      function checkBuildingIsClicked(lat, long) {
+         'use strict';
+         var bldgNumber,
+            currentText = document.getElementById('quiz').innerHTML;
+
+         function withinLatitudeRange(lat, bldg) {
+            return lat <= bldg.latMax && lat >= bldg.latMin;
+         }
+
+         function withinLongitudeRange(long, bldg) {
+            return long <= bldg.longMax && long >= bldg.longMin;
+         }
+
+         function animate(points) {
+            var position = 0,
+               interv,
+               animateDiv = document.getElementById("resultsDiv");
+            animateDiv.style.visibility = 'visible';
+            animateDiv.innerHTML = 'SCORE <br/>' + points + '/5';
+
+            function moveResultDiv() {
+               position += 1 / 10;
+               if (position < 70) {
+                  animateDiv.style.left = position + 'vw';
+                  animateDiv.style.top = position + 'vh';
+               }
+            }
+
+            interv = window.setInterval(moveResultDiv, 1);
+         }
+
+         function checkDoubleClickWithinBounds() {
+            rectangles[currentIndex].setOptions({
+               strokeOpacity: 0.8,
+               strokeWeight: 1,
+               fillOpacity: 0.1,
+            });
+            if (withinLatitudeRange(lat, buildings[currentIndex])
+                && withinLongitudeRange(long, buildings[currentIndex])) {
+               currentText += 'CORRECT :-)<br/><br/>';
+               rectangles[currentIndex].setOptions({
+                  visible: true,
+                  strokeColor: '#58FA58',
+                  fillColor: '#58FA58'
+               });
+               score += 1;
+            } else {
+               rectangles[currentIndex].setOptions({
+                  visible: true,
+                  strokeColor: '#FF0000',
+                  fillColor: '#FF0000'
+               });
+               currentText += 'INCORRECT :-(<br/><br/>';
+            }
+            document.getElementById('quiz').innerHTML = currentText;
+            currentIndex += 1;
+         }
+
+         function checkAnimation() { //If quiz is over play animation
+            if (currentIndex === 5) {
+               animate(score);
+            } else {
+               askQuizQuestion(currentIndex, currentText);
+            }
+         }
+         checkDoubleClickWithinBounds();
+         checkAnimation();
+      }
+
+      function doubleClicked(e) {
+         'use strict';
+         latitude = e.latLng.lat();
+         longitude = e.latLng.lng();
+         checkBuildingIsClicked(latitude, longitude);
+      }
+
+      function init() { //Runs google maps API
+         'use strict';
+         var arborGrillRec,
+            libraryRec,
+            jacarandaRec,
+            squareRec,
+            bayramianRec,
+            mapOptions;
+         mapOptions = {
+            zoom: 17,
+            center: new google.maps.LatLng(34.24037977144924, -118.52943420410156),
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            disableDoubleClickZoom: true,
+            disableDefaultUI: true,
+            zoomControl: false,
+            draggable: false,
+            scrollwheel: false
+         };
+         map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+         libraryRec = new google.maps.Rectangle({
+            visible: false,
+            map: map,
+            bounds: {
+               north: 34.240399327115504,
+               south: 34.23965429778273,
+               east: -118.52864306420429,
+               west: -118.53001635521991
+            }
+         });
+         arborGrillRec = new google.maps.Rectangle({
+            visible: false,
+            map: map,
+            bounds: {
+               north: 34.241320164696,
+               south: 34.24103634787999,
+               east: -118.52955501526935,
+               west: -118.52976959199054
+            }
+         });
+         jacarandaRec = new google.maps.Rectangle({
+            visible: false,
+            map: map,
+            bounds: {
+               north: 34.24206517928518,
+               south: 34.241027478589054,
+               east: -118.52785985917194,
+               west: -118.52944772690876
+            }
+         });
+         squareRec = new google.maps.Rectangle({
+            strokeOpacity: 0.8,
+            strokeWeight: 1,
+            fillOpacity: 0.1,
+            visible: false,
+            map: map,
+            bounds: {
+               north: 34.2397059437991,
+               south: 34.23920925421882,
+               west: -118.52816026658161,
+               east: -118.5274199768935
+            }
+         });
+         bayramianRec = new google.maps.Rectangle({
+            visible: false,
+            map: map,
+            bounds: {
+               north: 34.24068360804601,
+               south: 34.24000066704912,
+               west: -118.53145262226633,
+               east: -118.53017052635721
+            }
+         });
+         google.maps.event.addListener(map, 'dblclick', doubleClicked);
+
+         rectangles =
+            [libraryRec, arborGrillRec, jacarandaRec, squareRec, bayramianRec];
+      }
+      window.addEventListener("load", init, false);
+   </script>
+
+</head>
+   <body onload="askQuizQuestion(0, '')">
+      <h1>COMP 484 LAB 3 - CSUN MAP QUIZ - CHRIS TUFENKJIAN</h1>
+      <div id="map-canvas"></div>
+      <div id="quiz"></div>
+      <div id="resultsDiv"></div>
+   </body>
+</html>
